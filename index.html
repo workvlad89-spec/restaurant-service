@@ -1,0 +1,74 @@
+```html
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>Obsługa stolika</title>
+
+    <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+
+    <main class="container">
+
+        <div class="logo">RESTAURACJA XYZ</div>
+
+        <div class="table">
+            Stolik <span id="tableNumber">17</span>
+        </div>
+
+        <h1>W czym możemy pomóc?</h1>
+
+        <p class="subtitle">
+            Wybierz, czego potrzebujesz
+        </p>
+
+        <div class="buttons">
+
+            <button onclick="sendRequest('Poproś o kelnera')">
+                🛎️
+                <span>Poproś o kelnera</span>
+            </button>
+
+            <button onclick="sendRequest('Woda')">
+                💧
+                <span>Poproś o wodę</span>
+            </button>
+
+            <button onclick="sendRequest('Sztućce')">
+                🍴
+                <span>Poproś o sztućce</span>
+            </button>
+
+            <button onclick="sendRequest('Serwetki')">
+                🧻
+                <span>Poproś o serwetki</span>
+            </button>
+
+            <button onclick="sendRequest('Rachunek')">
+                💳
+                <span>Poproś o rachunek</span>
+            </button>
+
+        </div>
+
+        <button class="other" onclick="sendRequest('Inna prośba')">
+            ❓ Inna prośba
+        </button>
+
+        <button class="review" onclick="openReview()">
+            ⭐ Oceń nas w Google
+        </button>
+
+        <div id="message"></div>
+
+    </main>
+
+    <script type="module" src="app.js"></script>
+
+</body>
+</html>
+```
