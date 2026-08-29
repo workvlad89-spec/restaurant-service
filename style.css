@@ -1,0 +1,95 @@
+```css
+* {
+    box-sizing: border-box;
+}
+
+body {
+    margin: 0;
+    font-family: Arial, sans-serif;
+    background: #f5f5f5;
+    color: #222;
+}
+
+.container {
+    width: 100%;
+    max-width: 480px;
+    margin: 0 auto;
+    padding: 30px 20px 40px;
+    text-align: center;
+}
+
+.logo {
+    font-size: 22px;
+    font-weight: 700;
+    margin-bottom: 8px;
+}
+
+.table {
+    color: #777;
+    font-size: 15px;
+    margin-bottom: 35px;
+}
+
+.table span {
+    font-weight: 700;
+    color: #222;
+}
+
+h1 {
+    font-size: 28px;
+    margin-bottom: 8px;
+}
+
+.subtitle {
+    color: #777;
+    margin-bottom: 25px;
+}
+
+.buttons {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+button {
+    width: 100%;
+    border: none;
+    border-radius: 14px;
+    padding: 18px;
+    font-size: 17px;
+    background: white;
+    cursor: pointer;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.08);
+
+    display: flex;
+    align-items: center;
+    gap: 15px;
+}
+
+button:hover {
+    transform: translateY(-1px);
+}
+
+button span {
+    font-weight: 600;
+}
+
+.other {
+    margin-top: 15px;
+    justify-content: center;
+    background: #222;
+    color: white;
+}
+
+.review {
+    margin-top: 15px;
+    justify-content: center;
+    background: #fff;
+}
+
+#message {
+    margin-top: 25px;
+    font-weight: 600;
+    min-height: 24px;
+}
+```
