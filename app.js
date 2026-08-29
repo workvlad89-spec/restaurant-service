@@ -1,4 +1,3 @@
-```javascript
 import { initializeApp } from "https://www.gstatic.com/firebasejs/12.2.1/firebase-app.js";
 import {
     getDatabase,
@@ -23,22 +22,14 @@ const database = getDatabase(app);
 const params = new URLSearchParams(window.location.search);
 const tableNumber = params.get("table") || "17";
 
-const tableElement = document.getElementById("tableNumber");
+document.getElementById("tableNumber").textContent = tableNumber;
 
-if (tableElement) {
-    tableElement.textContent = tableNumber;
-}
-
-window.sendRequest = async function (requestType) {
-
+window.sendRequest = async function(requestType) {
     const message = document.getElementById("message");
 
-    if (message) {
-        message.textContent = "Wysyłanie...";
-    }
+    message.textContent = "Wysyłanie...";
 
     try {
-
         const requestRef = push(ref(database, "requests"));
 
         await set(requestRef, {
@@ -49,28 +40,14 @@ window.sendRequest = async function (requestType) {
             createdAt: Date.now()
         });
 
-        if (message) {
-            message.textContent = "✅ Kelner został powiadomiony.";
-        }
-
-        console.log("Request sent:", requestType);
+        message.textContent = "✅ Kelner został powiadomiony.";
 
     } catch (error) {
-
-        console.error("Firebase error:", error);
-
-        if (message) {
-            message.textContent =
-                "❌ Wystąpił błąd. Spróbuj ponownie.";
-        }
+        console.error(error);
+        message.textContent = "❌ Wystąpił błąd.";
     }
 };
 
-window.openReview = function () {
-
-    window.open(
-        "https://www.google.com/",
-        "_blank"
-    );
+window.openReview = function() {
+    window.open("https://www.google.com/", "_blank");
 };
-```
