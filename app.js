@@ -7,11 +7,6 @@ import {
     set
 } from "https://www.gstatic.com/firebasejs/12.2.1/firebase-database.js";
 
-
-// ================================
-// FIREBASE
-// ================================
-
 const firebaseConfig = {
     apiKey: "AIzaSyAf1M8hjAJ12p3X3CbZ_s8kjcYq7LTiqWo",
     authDomain: "restaurant-service-a66ae.firebaseapp.com",
@@ -25,80 +20,57 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 const database = getDatabase(app);
 
-
-// ================================
-// НОМЕР СТОЛИКА
-// ================================
-
-// Например:
-// index.html?table=17
-
 const params = new URLSearchParams(window.location.search);
-
 const tableNumber = params.get("table") || "17";
 
-document.getElementById("tableNumber").textContent = tableNumber;
+const tableElement = document.getElementById("tableNumber");
 
+if (tableElement) {
+    tableElement.textContent = tableNumber;
+}
 
-// ================================
-// GOOGLE REVIEW
-// ================================
+window.sendRequest = async function (requestType) {
 
-function openReview() {
+    const message = document.getElementById("message");
 
-    // Пока тестовая ссылка.
-    // Потом сюда поставим ссылку конкретного ресторана.
+    if (message) {
+        message.textContent = "Wysyłanie...";
+    }
+
+    try {
+
+        const requestRef = push(ref(database, "requests"));
+
+        await set(requestRef, {
+            restaurantId: "restaurant_001",
+            table: tableNumber,
+            request: requestType,
+            status: "new",
+            createdAt: Date.now()
+        });
+
+        if (message) {
+            message.textContent = "✅ Kelner został powiadomiony.";
+        }
+
+        console.log("Request sent:", requestType);
+
+    } catch (error) {
+
+        console.error("Firebase error:", error);
+
+        if (message) {
+            message.textContent =
+                "❌ Wystąpił błąd. Spróbuj ponownie.";
+        }
+    }
+};
+
+window.openReview = function () {
 
     window.open(
         "https://www.google.com/",
         "_blank"
     );
-}
-
-
-// ================================
-// ОТПРАВКА ЗАПРОСА
-// ================================
-
-window.sendRequest = async function(requestType) {
-
-    const message = document.getElementById("message");
-
-    message.textContent = "Wysyłanie...";
-
-    try {
-
-        const requestRef = push(
-            ref(database, "requests")
-        );
-
-        await set(requestRef, {
-
-            restaurantId: "restaurant_001",
-
-            table: tableNumber,
-
-            request: requestType,
-
-            status: "new",
-
-            createdAt: Date.now()
-
-        });
-
-        message.textContent =
-            "✅ Kelner został powiadomiony.";
-
-    } catch (error) {
-
-        console.error(error);
-
-        message.textContent =
-            "❌ Wystąpił błąd. Spróbuj ponownie.";
-    }
 };
-
-
-// Делаем функцию доступной HTML-кнопке
-window.openReview = openReview;
 ```
