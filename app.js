@@ -2,19 +2,32 @@ document.addEventListener("DOMContentLoaded", function () {
 
     console.log("APP.JS DZIAŁA");
 
-    const buttons = document.querySelectorAll("button");
+    const params = new URLSearchParams(window.location.search);
+    const tableNumber = params.get("table") || "17";
+
+    document.getElementById("tableNumber").textContent = tableNumber;
+
+    const buttons = document.querySelectorAll("[data-request]");
+    const message = document.getElementById("message");
 
     buttons.forEach(function (button) {
 
         button.addEventListener("click", function () {
 
-            const message = document.getElementById("message");
+            const request = button.getAttribute("data-request");
 
-            message.textContent = "✅ TEST DZIAŁA";
+            console.log("BUTTON CLICKED:", request);
 
-            console.log("BUTTON CLICKED");
+            message.textContent =
+                "✅ Wybrano: " + request;
 
         });
+
+    });
+
+    document.getElementById("reviewButton").addEventListener("click", function () {
+
+        window.open("https://www.google.com/", "_blank");
 
     });
 
