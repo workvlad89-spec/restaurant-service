@@ -172,7 +172,7 @@
       <button>Zrealizowano ✅</button>
     `;
     card.querySelector("button").addEventListener("click", () => {
-      requestsRef.child(id).update({ status: "done" });
+      requestsRef.child(id).update({ status: "done", completedAt: Date.now() });
     });
 
     grid.prepend(card);
