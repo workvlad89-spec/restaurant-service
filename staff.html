@@ -27,14 +27,17 @@
     display: flex;
     justify-content: space-between;
     align-items: center;
+    flex-wrap: wrap;
+    gap: 12px;
     margin-bottom: 24px;
   }
   h1 { font-size: 22px; margin: 0; }
+  .header-right { display: flex; align-items: center; gap: 16px; }
   #status { font-size: 13px; color: var(--muted); }
   #status.connected::before { content: "● "; color: var(--success); }
   #status.disconnected::before { content: "● "; color: var(--danger); }
 
-  #enableSound {
+  #enableSound, #statsLink {
     background: var(--card);
     border: 1px solid #4a3620;
     color: var(--text);
@@ -42,62 +45,71 @@
     border-radius: 10px;
     cursor: pointer;
     font-size: 14px;
+    text-decoration: none;
+    display: inline-block;
   }
 
   .grid {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
     gap: 16px;
   }
 
   .card {
     background: var(--card);
     border: 1px solid #4a3620;
-    border-left: 6px solid var(--accent);
+    border-left: 6px solid #4a3620;
     border-radius: 14px;
     padding: 18px;
+    transition: border-color .2s ease, background .2s ease;
+    min-height: 128px;
+    display: flex;
+    flex-direction: column;
+  }
+  .card.free { opacity: 0.6; }
+  .card.busy {
+    border-left-color: var(--danger);
+    background: #3a1414;
     animation: pop .25s ease;
   }
-  .card.urgent { border-left-color: var(--danger); }
   @keyframes pop {
-    from { transform: scale(0.9); opacity: 0; }
+    from { transform: scale(0.95); opacity: 0; }
     to { transform: scale(1); opacity: 1; }
   }
-  .card .table { font-size: 22px; font-weight: 700; margin-bottom: 4px; }
-  .card .label { font-size: 16px; color: var(--text); margin-bottom: 4px; }
-  .card .time { font-size: 12px; color: var(--muted); margin-bottom: 14px; }
+  .card .table { font-size: 20px; font-weight: 700; margin-bottom: 6px; }
+  .card .status-line { font-size: 14px; color: var(--muted); margin-bottom: 4px; flex-grow: 1; }
+  .card.busy .status-line { color: #ffcccb; font-weight: 600; }
+  .card .time { font-size: 12px; color: var(--muted); margin-bottom: 12px; }
   .card button {
     width: 100%;
-    background: var(--success);
     border: none;
     border-radius: 10px;
     padding: 10px;
-    color: #06210f;
     font-weight: 700;
     cursor: pointer;
     font-size: 14px;
+    visibility: hidden;
   }
-
-  .empty {
-    color: var(--muted);
-    text-align: center;
-    margin-top: 80px;
-    font-size: 16px;
+  .card.busy button {
+    visibility: visible;
+    background: var(--danger);
+    color: #2b0505;
   }
+  .card.busy button:hover { filter: brightness(1.1); }
 </style>
 </head>
 <body>
 
 <header>
-  <h1>🔔 Stodoła Jagodno — zgłoszenia ze stolików</h1>
-  <div style="display:flex; align-items:center; gap:16px;">
+  <h1>🔔 Stodoła Jagodno — obsługa stolików</h1>
+  <div class="header-right">
     <span id="status" class="disconnected">łączenie…</span>
     <button id="enableSound">🔈 Włącz dźwięk</button>
+    <a href="stats.html" target="_blank" id="statsLink">📊 Statystyki</a>
   </div>
 </header>
 
 <div class="grid" id="grid"></div>
-<div class="empty" id="emptyMsg" style="display:none;">Brak aktywnych zgłoszeń — wszystko obsłużone ✅</div>
 
 <audio id="dingSound" preload="auto">
   <source src="https://actions.google.com/sounds/v1/alarms/beep_short.ogg" type="audio/ogg">
@@ -107,6 +119,8 @@
 <script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-database-compat.js"></script>
 
 <script>
+  const TABLE_COUNT = 10;
+
   const firebaseConfig = {
     apiKey: "AIzaSyAf1M8hjAJ12p3X3CbZ_s8kjcYq7LTiqWo",
     authDomain: "restaurant-service-a66ae.firebaseapp.com",
@@ -122,7 +136,6 @@
   const requestsRef = db.ref("requests");
 
   const grid = document.getElementById("grid");
-  const emptyMsg = document.getElementById("emptyMsg");
   const statusEl = document.getElementById("status");
   const dingSound = document.getElementById("dingSound");
 
@@ -143,8 +156,34 @@
     }
   });
 
-  const cardsById = {};
-  let firstLoad = true;
+  const labels = {
+    waiter: "Potrzebuje: Kelner",
+    water: "Potrzebuje: Woda",
+    cutlery: "Potrzebuje: Sztućce",
+    napkins: "Potrzebuje: Serwetki",
+    bill: "Potrzebuje: Rachunek",
+    other: "Ma inną prośbę"
+  };
+
+  // Stan każdego stolika: null (wolny) albo aktywne zgłoszenie {id, type, createdAt}
+  const tableState = {};
+  for (let i = 1; i <= TABLE_COUNT; i++) tableState[i] = null;
+
+  // Tworzymy stałe kafelki 1..10 raz, w kolejności
+  const cardEls = {};
+  for (let i = 1; i <= TABLE_COUNT; i++) {
+    const card = document.createElement("div");
+    card.className = "card free";
+    card.id = "table-" + i;
+    card.innerHTML = `
+      <div class="table">Stolik ${i}</div>
+      <div class="status-line">Wolny</div>
+      <div class="time"></div>
+      <button>Zrealizowano ✅</button>
+    `;
+    grid.appendChild(card);
+    cardEls[i] = card;
+  }
 
   function timeAgo(ts) {
     const sec = Math.floor((Date.now() - ts) / 1000);
@@ -153,31 +192,45 @@
     return min + " min temu";
   }
 
-  function renderEmptyState() {
-    emptyMsg.style.display = grid.children.length === 0 ? "block" : "none";
+  function renderTable(tableNum) {
+    const card = cardEls[tableNum];
+    if (!card) return; // stolik spoza zakresu 1–10, ignorujemy w widoku
+    const state = tableState[tableNum];
+
+    if (!state) {
+      card.className = "card free";
+      card.querySelector(".status-line").textContent = "Wolny";
+      card.querySelector(".time").textContent = "";
+      card.querySelector("button").onclick = null;
+    } else {
+      card.className = "card busy";
+      card.querySelector(".status-line").textContent = labels[state.type] || state.type;
+      card.querySelector(".time").textContent = timeAgo(state.createdAt);
+      card.querySelector("button").onclick = () => {
+        requestsRef.child(state.id).update({ status: "done", completedAt: Date.now() });
+      };
+    }
   }
 
-  // Nowe zgłoszenie
+  for (let i = 1; i <= TABLE_COUNT; i++) renderTable(i);
+
+  // Odświeżaj "X min temu" co 30 sekund
+  setInterval(() => {
+    for (let i = 1; i <= TABLE_COUNT; i++) renderTable(i);
+  }, 30000);
+
+  let firstLoad = true;
+
   requestsRef.orderByChild("status").equalTo("new").on("child_added", (snap) => {
     const req = snap.val();
     const id = snap.key;
+    const tableNum = parseInt(req.table, 10);
 
-    const card = document.createElement("div");
-    card.className = "card" + (req.type === "bill" || req.type === "waiter" ? " urgent" : "");
-    card.id = "card-" + id;
-    card.innerHTML = `
-      <div class="table">Stolik ${req.table}</div>
-      <div class="label">${req.label}</div>
-      <div class="time">${timeAgo(req.createdAt)}</div>
-      <button>Zrealizowano ✅</button>
-    `;
-    card.querySelector("button").addEventListener("click", () => {
-      requestsRef.child(id).update({ status: "done", completedAt: Date.now() });
-    });
-
-    grid.prepend(card);
-    cardsById[id] = card;
-    renderEmptyState();
+    if (tableNum >= 1 && tableNum <= TABLE_COUNT) {
+      // Jeśli stolik już miał aktywne zgłoszenie, nowe je nadpisuje (ostatnie ważne)
+      tableState[tableNum] = { id, type: req.type, createdAt: req.createdAt };
+      renderTable(tableNum);
+    }
 
     if (!firstLoad && soundEnabled) {
       dingSound.currentTime = 0;
@@ -185,19 +238,17 @@
     }
   });
 
-  // Zgłoszenie zrealizowane → usuń kartę
   requestsRef.on("child_changed", (snap) => {
     const req = snap.val();
     const id = snap.key;
-    if (req.status === "done" && cardsById[id]) {
-      cardsById[id].remove();
-      delete cardsById[id];
-      renderEmptyState();
+    const tableNum = parseInt(req.table, 10);
+    if (req.status === "done" && tableState[tableNum] && tableState[tableNum].id === id) {
+      tableState[tableNum] = null;
+      renderTable(tableNum);
     }
   });
 
   setTimeout(() => { firstLoad = false; }, 1500);
-  renderEmptyState();
 </script>
 
 </body>
