@@ -6,11 +6,11 @@
 <title>Obsługa stolika</title>
 <style>
   :root {
-    --bg: #0f1115;
-    --card: #1a1d24;
-    --accent: #ffb020;
-    --text: #f5f5f7;
-    --muted: #9aa0ab;
+    --bg: #201509;
+    --card: #2e2013;
+    --accent: #d9a441;
+    --text: #f5ede1;
+    --muted: #b9a488;
     --success: #2ecc71;
   }
   * { box-sizing: border-box; }
@@ -38,7 +38,7 @@
   }
   button.action {
     background: var(--card);
-    border: 1px solid #2a2e37;
+    border: 1px solid #4a3620;
     border-radius: 16px;
     padding: 20px 10px;
     color: var(--text);
@@ -56,11 +56,11 @@
     margin-top: 28px;
     width: 100%;
     max-width: 420px;
-    background: linear-gradient(135deg, #ffb020, #ff8a00);
+    background: linear-gradient(135deg, #d9a441, #b8842e);
     border: none;
     border-radius: 16px;
     padding: 16px;
-    color: #1a1200;
+    color: #201509;
     font-weight: 700;
     font-size: 15px;
     cursor: pointer;
@@ -89,7 +89,8 @@
 <body>
 
 <header>
-  <div class="restaurant-name">Restauracja XYZ</div>
+  <img src="https://cs.cdn-upm.com/themes/6d0d6b63-b7bb-11ef-9141-525400080621/assets-2/logo.webp" alt="Stodoła" style="height:56px; margin-bottom:8px;">
+  <div class="restaurant-name">Restauracja Stodoła Jagodno</div>
   <div class="table-number" id="tableLabel">Stolik —</div>
 </header>
 
@@ -125,7 +126,7 @@
   };
 
   // Link do wizytówki Google (podmień na prawdziwy link "Napisz opinię")
-  const GOOGLE_REVIEW_LINK = "https://g.page/r/PODMIEN_TO/review";
+  const GOOGLE_REVIEW_LINK = "https://search.google.com/local/writereview?placeid=ChIJQd2WqF3DDEcRRZQ73HALnYM";
 
   firebase.initializeApp(firebaseConfig);
   const db = firebase.database();
