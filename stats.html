@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Panel obsługi — zgłoszenia</title>
+<style>
+  :root {
+    --bg: #201509;
+    --card: #2e2013;
+    --accent: #d9a441;
+    --text: #f5ede1;
+    --muted: #b9a488;
+    --danger: #ff5a5f;
+    --success: #2ecc71;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    min-height: 100vh;
+    background: var(--bg);
+    color: var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    padding: 24px;
+  }
+  header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 24px;
+  }
+  h1 { font-size: 22px; margin: 0; }
+  #status { font-size: 13px; color: var(--muted); }
+  #status.connected::before { content: "● "; color: var(--success); }
+  #status.disconnected::before { content: "● "; color: var(--danger); }
+
+  #enableSound {
+    background: var(--card);
+    border: 1px solid #4a3620;
+    color: var(--text);
+    padding: 10px 16px;
+    border-radius: 10px;
+    cursor: pointer;
+    font-size: 14px;
+  }
+
+  .grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+    gap: 16px;
+  }
+
+  .card {
+    background: var(--card);
+    border: 1px solid #4a3620;
+    border-left: 6px solid var(--accent);
+    border-radius: 14px;
+    padding: 18px;
+    animation: pop .25s ease;
+  }
+  .card.urgent { border-left-color: var(--danger); }
+  @keyframes pop {
+    from { transform: scale(0.9); opacity: 0; }
+    to { transform: scale(1); opacity: 1; }
+  }
+  .card .table { font-size: 22px; font-weight: 700; margin-bottom: 4px; }
+  .card .label { font-size: 16px; color: var(--text); margin-bottom: 4px; }
+  .card .time { font-size: 12px; color: var(--muted); margin-bottom: 14px; }
+  .card button {
+    width: 100%;
+    background: var(--success);
+    border: none;
+    border-radius: 10px;
+    padding: 10px;
+    color: #06210f;
+    font-weight: 700;
+    cursor: pointer;
+    font-size: 14px;
+  }
+
+  .empty {
+    color: var(--muted);
+    text-align: center;
+    margin-top: 80px;
+    font-size: 16px;
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>🔔 Stodoła Jagodno — zgłoszenia ze stolików</h1>
+  <div style="display:flex; align-items:center; gap:16px;">
+    <span id="status" class="disconnected">łączenie…</span>
+    <button id="enableSound">🔈 Włącz dźwięk</button>
+  </div>
+</header>
+
+<div class="grid" id="grid"></div>
+<div class="empty" id="emptyMsg" style="display:none;">Brak aktywnych zgłoszeń — wszystko obsłużone ✅</div>
+
+<audio id="dingSound" preload="auto">
+  <source src="https://actions.google.com/sounds/v1/alarms/beep_short.ogg" type="audio/ogg">
+</audio>
+
+<script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-database-compat.js"></script>
+
+<script>
+  const firebaseConfig = {
+    apiKey: "AIzaSyAf1M8hjAJ12p3X3CbZ_s8kjcYq7LTiqWo",
+    authDomain: "restaurant-service-a66ae.firebaseapp.com",
+    databaseURL: "https://restaurant-service-a66ae-default-rtdb.europe-west1.firebasedatabase.app",
+    projectId: "restaurant-service-a66ae",
+    storageBucket: "restaurant-service-a66ae.firebasestorage.app",
+    messagingSenderId: "618221341596",
+    appId: "1:618221341596:web:0d0b2e2e8ec4f987165659"
+  };
+
+  firebase.initializeApp(firebaseConfig);
+  const db = firebase.database();
+  const requestsRef = db.ref("requests");
+
+  const grid = document.getElementById("grid");
+  const emptyMsg = document.getElementById("emptyMsg");
+  const statusEl = document.getElementById("status");
+  const dingSound = document.getElementById("dingSound");
+
+  let soundEnabled = false;
+  document.getElementById("enableSound").addEventListener("click", (e) => {
+    soundEnabled = true;
+    dingSound.play().catch(() => {});
+    e.target.textContent = "🔊 Dźwięk włączony";
+  });
+
+  db.ref(".info/connected").on("value", (snap) => {
+    if (snap.val() === true) {
+      statusEl.textContent = "połączono";
+      statusEl.className = "connected";
+    } else {
+      statusEl.textContent = "łączenie…";
+      statusEl.className = "disconnected";
+    }
+  });
+
+  const cardsById = {};
+  let firstLoad = true;
+
+  function timeAgo(ts) {
+    const sec = Math.floor((Date.now() - ts) / 1000);
+    if (sec < 60) return "przed chwilą";
+    const min = Math.floor(sec / 60);
+    return min + " min temu";
+  }
+
+  function renderEmptyState() {
+    emptyMsg.style.display = grid.children.length === 0 ? "block" : "none";
+  }
+
+  // Nowe zgłoszenie
+  requestsRef.orderByChild("status").equalTo("new").on("child_added", (snap) => {
+    const req = snap.val();
+    const id = snap.key;
+
+    const card = document.createElement("div");
+    card.className = "card" + (req.type === "bill" || req.type === "waiter" ? " urgent" : "");
+    card.id = "card-" + id;
+    card.innerHTML = `
+      <div class="table">Stolik ${req.table}</div>
+      <div class="label">${req.label}</div>
+      <div class="time">${timeAgo(req.createdAt)}</div>
+      <button>Zrealizowano ✅</button>
+    `;
+    card.querySelector("button").addEventListener("click", () => {
+      requestsRef.child(id).update({ status: "done", completedAt: Date.now() });
+    });
+
+    grid.prepend(card);
+    cardsById[id] = card;
+    renderEmptyState();
+
+    if (!firstLoad && soundEnabled) {
+      dingSound.currentTime = 0;
+      dingSound.play().catch(() => {});
+    }
+  });
+
+  // Zgłoszenie zrealizowane → usuń kartę
+  requestsRef.on("child_changed", (snap) => {
+    const req = snap.val();
+    const id = snap.key;
+    if (req.status === "done" && cardsById[id]) {
+      cardsById[id].remove();
+      delete cardsById[id];
+      renderEmptyState();
+    }
+  });
+
+  setTimeout(() => { firstLoad = false; }, 1500);
+  renderEmptyState();
+</script>
+
+</body>
+</html>
