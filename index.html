@@ -1,70 +1,191 @@
 <!DOCTYPE html>
 <html lang="pl">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Obsługa stolika</title>
-    <link rel="stylesheet" href="style.css">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Obsługa stolika</title>
+<style>
+  :root {
+    --bg: #0f1115;
+    --card: #1a1d24;
+    --accent: #ffb020;
+    --text: #f5f5f7;
+    --muted: #9aa0ab;
+    --success: #2ecc71;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    min-height: 100vh;
+    background: var(--bg);
+    color: var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 24px 16px 48px;
+  }
+  header { text-align: center; margin-bottom: 8px; }
+  .restaurant-name { font-size: 14px; letter-spacing: 2px; color: var(--muted); text-transform: uppercase; }
+  .table-number { font-size: 28px; font-weight: 700; margin-top: 4px; }
+  h1 { font-size: 20px; font-weight: 600; margin: 28px 0 20px; text-align: center; }
+  .grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 14px;
+    width: 100%;
+    max-width: 420px;
+  }
+  button.action {
+    background: var(--card);
+    border: 1px solid #2a2e37;
+    border-radius: 16px;
+    padding: 20px 10px;
+    color: var(--text);
+    font-size: 15px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+    cursor: pointer;
+    transition: transform .1s ease, border-color .2s ease;
+  }
+  button.action:active { transform: scale(0.96); border-color: var(--accent); }
+  button.action .emoji { font-size: 30px; }
+  .review-btn {
+    margin-top: 28px;
+    width: 100%;
+    max-width: 420px;
+    background: linear-gradient(135deg, #ffb020, #ff8a00);
+    border: none;
+    border-radius: 16px;
+    padding: 16px;
+    color: #1a1200;
+    font-weight: 700;
+    font-size: 15px;
+    cursor: pointer;
+  }
+  .toast {
+    position: fixed;
+    bottom: 24px;
+    left: 50%;
+    transform: translateX(-50%) translateY(20px);
+    background: var(--success);
+    color: #06210f;
+    padding: 14px 20px;
+    border-radius: 12px;
+    font-weight: 600;
+    opacity: 0;
+    transition: all .25s ease;
+    pointer-events: none;
+    max-width: 90%;
+    text-align: center;
+  }
+  .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+  button.action.sent { border-color: var(--success); }
+  button.action:disabled { opacity: 0.5; pointer-events: none; }
+</style>
 </head>
-
 <body>
 
-    <main class="container">
+<header>
+  <div class="restaurant-name">Restauracja XYZ</div>
+  <div class="table-number" id="tableLabel">Stolik —</div>
+</header>
 
-        <div class="logo">RESTAURACJA XYZ</div>
+<h1>W czym możemy pomóc?</h1>
 
-        <div class="table">
-            Stolik <span id="tableNumber">17</span>
-        </div>
+<div class="grid" id="actionsGrid">
+  <button class="action" data-type="waiter"><span class="emoji">🛎️</span>Poproś o kelnera</button>
+  <button class="action" data-type="water"><span class="emoji">💧</span>Poproś o wodę</button>
+  <button class="action" data-type="cutlery"><span class="emoji">🍴</span>Poproś o sztućce</button>
+  <button class="action" data-type="napkins"><span class="emoji">🧻</span>Poproś o serwetki</button>
+  <button class="action" data-type="bill"><span class="emoji">💳</span>Poproś o rachunek</button>
+  <button class="action" data-type="other"><span class="emoji">❓</span>Inna prośba</button>
+</div>
 
-        <h1>W czym możemy pomóc?</h1>
+<button class="review-btn" id="reviewBtn">⭐ Oceń nas w Google</button>
 
-        <p class="subtitle">
-            Wybierz, czego potrzebujesz
-        </p>
+<div class="toast" id="toast"></div>
 
-        <div class="buttons">
+<!-- Firebase SDK (compat build — proste API, bez bundlera) -->
+<script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-database-compat.js"></script>
 
-            <button data-request="Poproś o kelnera">
-                🛎️
-                <span>Poproś o kelnera</span>
-            </button>
+<script>
+  // ==== KONFIGURACJA — podmień na swoje wartości ====
+  const firebaseConfig = {
+    apiKey: "AIzaSyAf1M8hjAJ12p3X3CbZ_s8kjcYq7LTiqWo",
+    authDomain: "restaurant-service-a66ae.firebaseapp.com",
+    databaseURL: "https://restaurant-service-a66ae-default-rtdb.europe-west1.firebasedatabase.app",
+    projectId: "restaurant-service-a66ae",
+    storageBucket: "restaurant-service-a66ae.firebasestorage.app",
+    messagingSenderId: "618221341596",
+    appId: "1:618221341596:web:0d0b2e2e8ec4f987165659"
+  };
 
-            <button data-request="Woda">
-                💧
-                <span>Poproś o wodę</span>
-            </button>
+  // Link do wizytówki Google (podmień na prawdziwy link "Napisz opinię")
+  const GOOGLE_REVIEW_LINK = "https://g.page/r/PODMIEN_TO/review";
 
-            <button data-request="Sztućce">
-                🍴
-                <span>Poproś o sztućce</span>
-            </button>
+  firebase.initializeApp(firebaseConfig);
+  const db = firebase.database();
 
-            <button data-request="Serwetki">
-                🧻
-                <span>Poproś o serwetki</span>
-            </button>
+  // Numer stolika z URL, np. index.html?table=17
+  const params = new URLSearchParams(window.location.search);
+  const tableNumber = params.get("table") || "?";
+  document.getElementById("tableLabel").textContent = "Stolik " + tableNumber;
 
-            <button data-request="Rachunek">
-                💳
-                <span>Poproś o rachunek</span>
-            </button>
+  const labels = {
+    waiter: "Prośba: kelner",
+    water: "Prośba: woda",
+    cutlery: "Prośba: sztućce",
+    napkins: "Prośba: serwetki",
+    bill: "Prośba: rachunek",
+    other: "Inna prośba"
+  };
 
-        </div>
+  const toast = document.getElementById("toast");
+  function showToast(text) {
+    toast.textContent = text;
+    toast.classList.add("show");
+    setTimeout(() => toast.classList.remove("show"), 2500);
+  }
 
-        <button class="other" data-request="Inna prośba">
-            ❓ Inna prośba
-        </button>
+  document.querySelectorAll(".action").forEach(btn => {
+    btn.addEventListener("click", () => {
+      const type = btn.dataset.type;
 
-        <button class="review" id="reviewButton">
-            ⭐ Oceń nas w Google
-        </button>
+      btn.disabled = true;
 
-        <div id="message"></div>
+      const request = {
+        table: tableNumber,
+        type: type,
+        label: labels[type],
+        status: "new",
+        createdAt: Date.now()
+      };
 
-    </main>
+      db.ref("requests").push(request)
+        .then(() => {
+          btn.classList.add("sent");
+          showToast("Wysłano: " + labels[type]);
+          setTimeout(() => {
+            btn.disabled = false;
+            btn.classList.remove("sent");
+          }, 4000);
+        })
+        .catch((err) => {
+          console.error(err);
+          btn.disabled = false;
+          showToast("Błąd wysyłki, spróbuj ponownie");
+        });
+    });
+  });
 
-    <script src="app.js"></script>
+  document.getElementById("reviewBtn").addEventListener("click", () => {
+    window.open(GOOGLE_REVIEW_LINK, "_blank");
+  });
+</script>
 
 </body>
 </html>
