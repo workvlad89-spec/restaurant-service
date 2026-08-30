@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Panel obsługi — zgłoszenia</title>
+<title>Statystyki — Stodoła Jagodno</title>
 <style>
   :root {
     --bg: #201509;
@@ -11,7 +11,6 @@
     --accent: #d9a441;
     --text: #f5ede1;
     --muted: #b9a488;
-    --danger: #ff5a5f;
     --success: #2ecc71;
   }
   * { box-sizing: border-box; }
@@ -27,81 +26,82 @@
     display: flex;
     justify-content: space-between;
     align-items: center;
+    flex-wrap: wrap;
+    gap: 12px;
     margin-bottom: 24px;
   }
   h1 { font-size: 22px; margin: 0; }
-  #status { font-size: 13px; color: var(--muted); }
-  #status.connected::before { content: "● "; color: var(--success); }
-  #status.disconnected::before { content: "● "; color: var(--danger); }
 
-  #enableSound {
+  .filters { display: flex; gap: 8px; }
+  .filters button {
     background: var(--card);
     border: 1px solid #4a3620;
     color: var(--text);
-    padding: 10px 16px;
+    padding: 8px 14px;
     border-radius: 10px;
     cursor: pointer;
-    font-size: 14px;
+    font-size: 13px;
   }
+  .filters button.active { background: var(--accent); color: #201509; font-weight: 700; border-color: var(--accent); }
 
-  .grid {
+  .summary {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
-    gap: 16px;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 14px;
+    margin-bottom: 28px;
   }
-
-  .card {
+  .stat-card {
     background: var(--card);
     border: 1px solid #4a3620;
-    border-left: 6px solid var(--accent);
     border-radius: 14px;
     padding: 18px;
-    animation: pop .25s ease;
-  }
-  .card.urgent { border-left-color: var(--danger); }
-  @keyframes pop {
-    from { transform: scale(0.9); opacity: 0; }
-    to { transform: scale(1); opacity: 1; }
-  }
-  .card .table { font-size: 22px; font-weight: 700; margin-bottom: 4px; }
-  .card .label { font-size: 16px; color: var(--text); margin-bottom: 4px; }
-  .card .time { font-size: 12px; color: var(--muted); margin-bottom: 14px; }
-  .card button {
-    width: 100%;
-    background: var(--success);
-    border: none;
-    border-radius: 10px;
-    padding: 10px;
-    color: #06210f;
-    font-weight: 700;
-    cursor: pointer;
-    font-size: 14px;
-  }
-
-  .empty {
-    color: var(--muted);
     text-align: center;
-    margin-top: 80px;
-    font-size: 16px;
   }
+  .stat-card .value { font-size: 30px; font-weight: 700; color: var(--accent); }
+  .stat-card .label { font-size: 13px; color: var(--muted); margin-top: 4px; }
+
+  h2 { font-size: 16px; margin: 32px 0 14px; color: var(--muted); font-weight: 600; }
+
+  .bar-row { display: flex; align-items: center; gap: 12px; margin-bottom: 10px; }
+  .bar-row .name { width: 130px; font-size: 14px; flex-shrink: 0; }
+  .bar-track { flex: 1; background: #1a1206; border-radius: 8px; height: 22px; overflow: hidden; }
+  .bar-fill { background: var(--accent); height: 100%; border-radius: 8px; transition: width .3s ease; }
+  .bar-row .count { width: 34px; text-align: right; font-size: 13px; color: var(--muted); flex-shrink: 0; }
+
+  table { width: 100%; border-collapse: collapse; margin-top: 8px; }
+  th, td { text-align: left; padding: 10px 12px; font-size: 14px; border-bottom: 1px solid #3a2a15; }
+  th { color: var(--muted); font-weight: 600; font-size: 13px; }
+
+  .empty { color: var(--muted); text-align: center; margin-top: 60px; }
 </style>
 </head>
 <body>
 
 <header>
-  <h1>🔔 Stodoła Jagodno — zgłoszenia ze stolików</h1>
-  <div style="display:flex; align-items:center; gap:16px;">
-    <span id="status" class="disconnected">łączenie…</span>
-    <button id="enableSound">🔈 Włącz dźwięk</button>
+  <h1>📊 Statystyki zgłoszeń</h1>
+  <div class="filters" id="filters">
+    <button data-range="today" class="active">Dziś</button>
+    <button data-range="week">7 dni</button>
+    <button data-range="all">Wszystko</button>
   </div>
 </header>
 
-<div class="grid" id="grid"></div>
-<div class="empty" id="emptyMsg" style="display:none;">Brak aktywnych zgłoszeń — wszystko obsłużone ✅</div>
+<div class="summary" id="summary"></div>
 
-<audio id="dingSound" preload="auto">
-  <source src="https://actions.google.com/sounds/v1/alarms/beep_short.ogg" type="audio/ogg">
-</audio>
+<h2>Zgłoszenia wg typu</h2>
+<div id="byType"></div>
+
+<h2>Zgłoszenia wg stolika</h2>
+<div id="byTable"></div>
+
+<h2>Ostatnie zgłoszenia</h2>
+<table id="recentTable">
+  <thead>
+    <tr><th>Stolik</th><th>Prośba</th><th>Czas oczekiwania</th><th>Kiedy</th></tr>
+  </thead>
+  <tbody id="recentBody"></tbody>
+</table>
+<div class="empty" id="emptyMsg" style="display:none;">Brak danych w wybranym okresie.</div>
 
 <script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-database-compat.js"></script>
@@ -121,83 +121,136 @@
   const db = firebase.database();
   const requestsRef = db.ref("requests");
 
-  const grid = document.getElementById("grid");
-  const emptyMsg = document.getElementById("emptyMsg");
-  const statusEl = document.getElementById("status");
-  const dingSound = document.getElementById("dingSound");
+  const labels = {
+    waiter: "Kelner",
+    water: "Woda",
+    cutlery: "Sztućce",
+    napkins: "Serwetki",
+    bill: "Rachunek",
+    other: "Inna prośba"
+  };
 
-  let soundEnabled = false;
-  document.getElementById("enableSound").addEventListener("click", (e) => {
-    soundEnabled = true;
-    dingSound.play().catch(() => {});
-    e.target.textContent = "🔊 Dźwięk włączony";
-  });
+  const TABLE_COUNT = 10;
 
-  db.ref(".info/connected").on("value", (snap) => {
-    if (snap.val() === true) {
-      statusEl.textContent = "połączono";
-      statusEl.className = "connected";
-    } else {
-      statusEl.textContent = "łączenie…";
-      statusEl.className = "disconnected";
-    }
-  });
+  let allRequests = [];
+  let currentRange = "today";
 
-  const cardsById = {};
-  let firstLoad = true;
-
-  function timeAgo(ts) {
-    const sec = Math.floor((Date.now() - ts) / 1000);
-    if (sec < 60) return "przed chwilą";
+  function formatDuration(ms) {
+    const sec = Math.round(ms / 1000);
+    if (sec < 60) return sec + " s";
     const min = Math.floor(sec / 60);
-    return min + " min temu";
+    const remSec = sec % 60;
+    return min + " min " + remSec + " s";
   }
 
-  function renderEmptyState() {
-    emptyMsg.style.display = grid.children.length === 0 ? "block" : "none";
+  function formatWhen(ts) {
+    const d = new Date(ts);
+    return d.toLocaleDateString("pl-PL") + " " + d.toLocaleTimeString("pl-PL", { hour: "2-digit", minute: "2-digit" });
   }
 
-  // Nowe zgłoszenie
-  requestsRef.orderByChild("status").equalTo("new").on("child_added", (snap) => {
-    const req = snap.val();
-    const id = snap.key;
+  function rangeStart(range) {
+    const now = new Date();
+    if (range === "today") {
+      now.setHours(0, 0, 0, 0);
+      return now.getTime();
+    }
+    if (range === "week") {
+      return Date.now() - 7 * 24 * 60 * 60 * 1000;
+    }
+    return 0;
+  }
 
-    const card = document.createElement("div");
-    card.className = "card" + (req.type === "bill" || req.type === "waiter" ? " urgent" : "");
-    card.id = "card-" + id;
-    card.innerHTML = `
-      <div class="table">Stolik ${req.table}</div>
-      <div class="label">${req.label}</div>
-      <div class="time">${timeAgo(req.createdAt)}</div>
-      <button>Zrealizowano ✅</button>
-    `;
-    card.querySelector("button").addEventListener("click", () => {
-      requestsRef.child(id).update({ status: "done", completedAt: Date.now() });
+  function render() {
+    const start = rangeStart(currentRange);
+    const filtered = allRequests.filter(r => {
+      const tableNum = parseInt(r.table, 10);
+      return r.createdAt >= start && tableNum >= 1 && tableNum <= TABLE_COUNT;
     });
 
-    grid.prepend(card);
-    cardsById[id] = card;
-    renderEmptyState();
+    document.getElementById("emptyMsg").style.display = filtered.length === 0 ? "block" : "none";
 
-    if (!firstLoad && soundEnabled) {
-      dingSound.currentTime = 0;
-      dingSound.play().catch(() => {});
-    }
+    // Summary cards
+    const total = filtered.length;
+    const doneOnes = filtered.filter(r => r.status === "done" && r.completedAt);
+    const avgMs = doneOnes.length
+      ? doneOnes.reduce((sum, r) => sum + (r.completedAt - r.createdAt), 0) / doneOnes.length
+      : null;
+    const pending = filtered.filter(r => r.status !== "done").length;
+
+    const reviewClicks = filtered.filter(r => r.type === "review_click").length;
+
+    document.getElementById("summary").innerHTML = `
+      <div class="stat-card"><div class="value">${total}</div><div class="label">Zgłoszeń łącznie</div></div>
+      <div class="stat-card"><div class="value">${avgMs !== null ? formatDuration(avgMs) : "—"}</div><div class="label">Śr. czas reakcji</div></div>
+      <div class="stat-card"><div class="value">${pending}</div><div class="label">Aktualnie w toku</div></div>
+    `;
+
+    // By type
+    const byType = {};
+    filtered.forEach(r => {
+      if (r.type === "review_click") return;
+      byType[r.type] = (byType[r.type] || 0) + 1;
+    });
+    const maxType = Math.max(1, ...Object.values(byType));
+    const typeHtml = Object.entries(byType)
+      .sort((a, b) => b[1] - a[1])
+      .map(([type, count]) => `
+        <div class="bar-row">
+          <div class="name">${labels[type] || type}</div>
+          <div class="bar-track"><div class="bar-fill" style="width:${(count / maxType) * 100}%"></div></div>
+          <div class="count">${count}</div>
+        </div>
+      `).join("");
+    document.getElementById("byType").innerHTML = typeHtml || "<p style='color:var(--muted)'>Brak danych.</p>";
+
+    // By table — zawsze w kolejności 1..10, nawet gdy 0 zgłoszeń
+    const byTable = {};
+    for (let i = 1; i <= TABLE_COUNT; i++) byTable[i] = 0;
+    filtered.forEach(r => {
+      if (r.type === "review_click") return;
+      const t = parseInt(r.table, 10);
+      byTable[t] = (byTable[t] || 0) + 1;
+    });
+    const maxTable = Math.max(1, ...Object.values(byTable));
+    const tableHtml = Object.entries(byTable)
+      .sort((a, b) => parseInt(a[0], 10) - parseInt(b[0], 10))
+      .map(([table, count]) => `
+        <div class="bar-row">
+          <div class="name">Stolik ${table}</div>
+          <div class="bar-track"><div class="bar-fill" style="width:${(count / maxTable) * 100}%"></div></div>
+          <div class="count">${count}</div>
+        </div>
+      `).join("");
+    document.getElementById("byTable").innerHTML = tableHtml || "<p style='color:var(--muted)'>Brak danych.</p>";
+
+    // Recent table
+    const recent = [...filtered]
+      .filter(r => r.type !== "review_click")
+      .sort((a, b) => b.createdAt - a.createdAt)
+      .slice(0, 30);
+    document.getElementById("recentBody").innerHTML = recent.map(r => `
+      <tr>
+        <td>${r.table}</td>
+        <td>${labels[r.type] || r.type}</td>
+        <td>${r.completedAt ? formatDuration(r.completedAt - r.createdAt) : "w toku"}</td>
+        <td>${formatWhen(r.createdAt)}</td>
+      </tr>
+    `).join("");
+  }
+
+  requestsRef.on("value", (snap) => {
+    const data = snap.val() || {};
+    allRequests = Object.values(data);
+    render();
   });
 
-  // Zgłoszenie zrealizowane → usuń kartę
-  requestsRef.on("child_changed", (snap) => {
-    const req = snap.val();
-    const id = snap.key;
-    if (req.status === "done" && cardsById[id]) {
-      cardsById[id].remove();
-      delete cardsById[id];
-      renderEmptyState();
-    }
+  document.getElementById("filters").addEventListener("click", (e) => {
+    if (e.target.tagName !== "BUTTON") return;
+    document.querySelectorAll("#filters button").forEach(b => b.classList.remove("active"));
+    e.target.classList.add("active");
+    currentRange = e.target.dataset.range;
+    render();
   });
-
-  setTimeout(() => { firstLoad = false; }, 1500);
-  renderEmptyState();
 </script>
 
 </body>
