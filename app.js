@@ -1,10 +1,5 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/12.2.1/firebase-app.js";
-import {
-    getDatabase,
-    ref,
-    push,
-    set
-} from "https://www.gstatic.com/firebasejs/12.2.1/firebase-database.js";
+import { getDatabase, ref, push, set } from "https://www.gstatic.com/firebasejs/12.2.1/firebase-database.js";
 
 const firebaseConfig = {
     apiKey: "AIzaSyAf1M8hjAJ12p3X3CbZ_s8kjcYq7LTiqWo",
@@ -43,7 +38,7 @@ window.sendRequest = async function(requestType) {
         message.textContent = "✅ Kelner został powiadomiony.";
 
     } catch (error) {
-        console.error(error);
+        console.error("Firebase error:", error);
         message.textContent = "❌ Wystąpił błąd.";
     }
 };
