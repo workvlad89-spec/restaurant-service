@@ -25,38 +25,38 @@
 
         <div class="buttons">
 
-            <button onclick="sendRequest('Poproś o kelnera')">
+            <button data-request="Poproś o kelnera">
                 🛎️
                 <span>Poproś o kelnera</span>
             </button>
 
-            <button onclick="sendRequest('Woda')">
+            <button data-request="Woda">
                 💧
                 <span>Poproś o wodę</span>
             </button>
 
-            <button onclick="sendRequest('Sztućce')">
+            <button data-request="Sztućce">
                 🍴
                 <span>Poproś o sztućce</span>
             </button>
 
-            <button onclick="sendRequest('Serwetki')">
+            <button data-request="Serwetki">
                 🧻
                 <span>Poproś o serwetki</span>
             </button>
 
-            <button onclick="sendRequest('Rachunek')">
+            <button data-request="Rachunek">
                 💳
                 <span>Poproś o rachunek</span>
             </button>
 
         </div>
 
-        <button class="other" onclick="sendRequest('Inna prośba')">
+        <button class="other" data-request="Inna prośba">
             ❓ Inna prośba
         </button>
 
-        <button class="review" onclick="openReview()">
+        <button class="review" id="reviewButton">
             ⭐ Oceń nas w Google
         </button>
 
@@ -64,7 +64,7 @@
 
     </main>
 
-    <script type="module" src="app.js"></script>
+    <script src="app.js"></script>
 
 </body>
 </html>
